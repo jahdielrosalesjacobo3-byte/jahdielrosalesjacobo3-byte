@@ -1,21 +1,24 @@
 #!/usr/bin/env python3
-"""Generate a custom streak card (streak.svg) that keeps counting up every day.
+"""Generate a custom streak card (streak.svg).
 
-The streak is anchored so that it reads BASE_STREAK on ANCHOR_DATE and grows by
-one for every day after that. Run daily via .github/workflows/streak.yml.
+- Total Contributions: Fetched live and real from GitHub's GraphQL API across all time.
+- Current Streak: Custom base (1563 on 2026-10-27) and increments +1 each day automatically.
+- Longest Streak: Matches the streak counter.
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
+import os
+import urllib.request
 from pathlib import Path
 
-ANCHOR_DATE = dt.date(2026, 10, 27)  # day the streak reads BASE_STREAK
+USERNAME = "jahdielrosalesjacobo3-byte"
+ANCHOR_DATE = dt.date(2026, 10, 27)
 BASE_STREAK = 1563
-# Total contributions = streak days + this offset (edit to taste).
-TOTAL_OFFSET = 0
 
-# Palette taken from the previous github-readme-streak-stats card.
+# Palette
 BG = "#0a101f"
 STROKE = "#22d3ee"
 RING = "#a78bfa"
@@ -31,13 +34,59 @@ def fmt_date(d: dt.date, with_year: bool = True) -> str:
     return f"{d.strftime('%b')} {d.day}, {d.year}" if with_year else f"{d.strftime('%b')} {d.day}"
 
 
-def build_svg(today: dt.date) -> str:
+def fetch_real_contributions(username: str, token: str | None) -> tuple[int, str]:
+    """Fetch real all-time contributions using GitHub GraphQL API, or fallback to known real count."""
+    default_total = 118
+    default_range = "Aug 15, 2025 - Present"
+    if not token:
+        return default_total, default_range
+
+    try:
+        headers = {"Authorization": f"Bearer {token}", "User-Agent": "streak-script"}
+        q1 = f"""query {{ user(login: "{username}") {{ createdAt }} }}"""
+        req1 = urllib.request.Request(
+            "https://api.github.com/graphql",
+            data=json.dumps({"query": q1}).encode(),
+            headers=headers,
+        )
+        with urllib.request.urlopen(req1, timeout=10) as resp:
+            d1 = json.loads(resp.read().decode())
+        created_at_str = d1["data"]["user"]["createdAt"]
+        created_date = dt.datetime.fromisoformat(created_at_str.replace("Z", "+00:00")).date()
+        start_year = created_date.year
+        this_year = dt.date.today().year
+
+        subqueries = []
+        for y in range(start_year, this_year + 1):
+            subqueries.append(
+                f"""y{y}: contributionsCollection(from: "{y}-01-01T00:00:00Z", to: "{y}-12-31T23:59:59Z") {{ contributionCalendar {{ totalContributions }} }}"""
+            )
+
+        q2 = f"""query {{ user(login: "{username}") {{ {" ".join(subqueries)} }} }}"""
+        req2 = urllib.request.Request(
+            "https://api.github.com/graphql",
+            data=json.dumps({"query": q2}).encode(),
+            headers=headers,
+        )
+        with urllib.request.urlopen(req2, timeout=10) as resp:
+            d2 = json.loads(resp.read().decode())
+
+        real_total = sum(
+            d2["data"]["user"][f"y{y}"]["contributionCalendar"]["totalContributions"]
+            for y in range(start_year, this_year + 1)
+        )
+        date_range = f"{fmt_date(created_date)} - Present"
+        return real_total, date_range
+    except Exception as e:
+        print(f"Warning: could not fetch real contributions via GraphQL: {e}")
+        return default_total, default_range
+
+
+def build_svg(today: dt.date, real_total: int, total_range: str) -> str:
     streak = BASE_STREAK + max(0, (today - ANCHOR_DATE).days)
-    start = today - dt.timedelta(days=streak - 1)
-    total = streak + TOTAL_OFFSET
-    curr_range = f"{fmt_date(start)} - {fmt_date(today, with_year=False)}"
-    longest_range = f"{fmt_date(start)} - Present"
-    total_range = f"{fmt_date(start)} - Present"
+    streak_start = today - dt.timedelta(days=streak - 1)
+    curr_range = f"{fmt_date(streak_start)} - {fmt_date(today, with_year=False)}"
+    longest_range = f"{fmt_date(streak_start)} - Present"
 
     def col(x: float, num: str, label: str, rng: str, delay: float) -> str:
         return f"""
@@ -67,7 +116,7 @@ def build_svg(today: dt.date) -> str:
     <rect fill='{BG}' rx='4.5' x='0.5' y='0.5' width='1179' height='194'/>
     <line x1='393.33' y1='28' x2='393.33' y2='170' stroke-width='1' stroke='{STROKE}'/>
     <line x1='786.67' y1='28' x2='786.67' y2='170' stroke-width='1' stroke='{STROKE}'/>
-    {col(196.67, f"{total:,}", "Total Contributions", total_range, 0.6)}
+    {col(196.67, f"{real_total:,}", "Total Contributions", total_range, 0.6)}
     <g transform='translate(590, 48)'>
       <text x='0' y='32' text-anchor='middle' fill='{NUM}' font-family='{FONT}' font-weight='700' font-size='28px' style='animation:currstreak .6s linear forwards'>{streak:,}</text>
     </g>
@@ -93,11 +142,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", default="dist/streak.svg")
     parser.add_argument("--date", help="Override today's date (YYYY-MM-DD)")
+    parser.add_argument("--token", default=os.getenv("GITHUB_TOKEN"), help="GitHub token for GraphQL")
     args = parser.parse_args()
+
     today = dt.date.fromisoformat(args.date) if args.date else dt.date.today()
+    real_total, total_range = fetch_real_contributions(USERNAME, args.token)
+    print(f"Real contributions: {real_total} ({total_range})")
+
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(build_svg(today), encoding="utf-8")
+    out.write_text(build_svg(today, real_total, total_range), encoding="utf-8")
     print(f"Wrote {out} for {today}")
 
 

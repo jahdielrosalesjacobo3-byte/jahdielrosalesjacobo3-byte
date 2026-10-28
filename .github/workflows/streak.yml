@@ -11,6 +11,10 @@ on:
       - scripts/streak.py
       - .github/workflows/streak.yml
 
+concurrency:
+  group: streak-update
+  cancel-in-progress: false
+
 jobs:
   streak:
     permissions:
@@ -22,6 +26,7 @@ jobs:
       - name: Generate streak.svg
         env:
           TZ: America/Mexico_City
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 scripts/streak.py --out dist/streak.svg
       - name: Push to streak-output branch
         uses: crazy-max/ghaction-github-pages@v3.1.0
