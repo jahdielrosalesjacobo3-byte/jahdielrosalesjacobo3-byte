@@ -7,9 +7,9 @@
 </div>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/jahdielrosalesjacobo3-byte/jahdielrosalesjacobo3-byte/main/portrait_dark.svg?v=8">
-  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/jahdielrosalesjacobo3-byte/jahdielrosalesjacobo3-byte/main/portrait_light.svg?v=8">
-  <img alt="Jahdiel Rosales — profile.sh --live" src="https://raw.githubusercontent.com/jahdielrosalesjacobo3-byte/jahdielrosalesjacobo3-byte/main/portrait_dark.svg?v=8" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/jahdielrosalesjacobo3-byte/jahdielrosalesjacobo3-byte/c7aa9b95bf8769f007215f1e7924862c1d484f80/portrait_dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/jahdielrosalesjacobo3-byte/jahdielrosalesjacobo3-byte/c7aa9b95bf8769f007215f1e7924862c1d484f80/portrait_light.svg">
+  <img alt="Jahdiel Rosales — profile.sh --live" src="https://raw.githubusercontent.com/jahdielrosalesjacobo3-byte/jahdielrosalesjacobo3-byte/c7aa9b95bf8769f007215f1e7924862c1d484f80/portrait_dark.svg" width="100%">
 </picture>
 
 <div align="center">
