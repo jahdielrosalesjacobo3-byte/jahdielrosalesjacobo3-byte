@@ -1,0 +1,33 @@
+name: Update Streak Card
+
+on:
+  schedule:
+    - cron: "5 6 * * *" # daily, ~00:05 Mexico City time
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/streak.py
+      - .github/workflows/streak.yml
+
+jobs:
+  streak:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate streak.svg
+        env:
+          TZ: America/Mexico_City
+        run: python3 scripts/streak.py --out dist/streak.svg
+      - name: Push to streak-output branch
+        uses: crazy-max/ghaction-github-pages@v3.1.0
+        with:
+          target_branch: streak-output
+          build_dir: dist
+          commit_message: "Update streak card [skip ci]"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
